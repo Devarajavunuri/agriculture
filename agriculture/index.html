@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agriculture Crop & Fertilizer Recommendation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #6dd5ed, #2193b0);
+            color: #333;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            width: 500px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .container:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        }
+        h1 {
+            color: #2193b0;
+            font-size: 36px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .upload-btn, .scan-btn {
+            background-color: #2193b0;
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+        .upload-btn:hover, .scan-btn:hover {
+            background-color: #6dd5ed;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .output {
+            margin-top: 30px;
+            font-size: 18px;
+            color: #333;
+            font-weight: 500;
+            transition: opacity 0.3s ease;
+        }
+        .output h3 {
+            color: #2193b0;
+        }
+        .output p {
+            margin-top: 10px;
+            color: #4caf50;
+            font-size: 16px;
+        }
+        .animation {
+            animation: fadeIn 1.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+        #camera-container {
+            display: none;
+            margin-top: 20px;
+        }
+        video {
+            width: 100%;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Agriculture Crop & Fertilizer Recommendation</h1>
+    <!-- Upload Image Button -->
+    <label for="soil-image" class="upload-btn">Upload Soil Image</label>
+    <input type="file" id="soil-image" accept="image/*">
+    
+    <!-- Scan Image Button -->
+    <button class="scan-btn" onclick="startScan()">Scan Soil Image</button>
+    
+    <!-- Video Stream for Camera -->
+    <div id="camera-container">
+        <video id="video" autoplay></video>
+        <button class="scan-btn" onclick="captureImage()">Capture Image</button>
+        <canvas id="canvas" style="display:none;"></canvas>
+    </div>
+
+    <!-- Output Section -->
+    <div id="output" class="output"></div>
+</div>
+
+<script>
+    // Handle file input for upload
+    document.getElementById('soil-image').addEventListener('change', function() {
+        const soilImage = this.files[0];
+        if (!soilImage) {
+            alert("Please upload a soil image.");
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('image', soilImage);
+        
+        document.getElementById('output').innerHTML = `<div class="animation">Processing...</div>`;
+        
+        fetch('/scan-land', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('output').innerHTML = `
+                <div class="animation">
+                    <h3>Recommended Crop: ${data.crop}</h3>
+                    <p>Recommended Fertilizer: ${data.fertilizer}</p>
+                </div>
+            `;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('output').innerHTML = `<div class="animation">There was an error processing the image.</div>`;
+        });
+    });
+
+    // Handle scanning of the soil image using camera
+    function startScan() {
+        const cameraContainer = document.getElementById('camera-container');
+        const video = document.getElementById('video');
+        
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    cameraContainer.style.display = 'block';
+                })
+                .catch(function(error) {
+                    alert("Error accessing camera: " + error);
+                });
+        } else {
+            alert("Camera not available.");
+        }
+    }
+
+    // Capture image from video stream
+    function captureImage() {
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        const dataUrl = canvas.toDataURL('image/png');
+        const image = dataUrl.split(',')[1];
+        
+        const formData = new FormData();
+        formData.append('image', image);
+        
+        document.getElementById('output').innerHTML = `<div class="animation">Processing...</div>`;
+        
+        fetch('/scan-land', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('output').innerHTML = `
+                <div class="animation">
+                    <h3>Recommended Crop: ${data.crop}</h3>
+                    <p>Recommended Fertilizer: ${data.fertilizer}</p>
+                </div>
+            `;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('output').innerHTML = `<div class="animation">There was an error processing the image.</div>`;
+        });
+    }
+</script>
+
+</body>
+</html>
